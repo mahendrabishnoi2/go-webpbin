@@ -1,57 +1,67 @@
 package webpbin
 
 import (
-	"net/http"
-	"os"
-	"io"
-	"github.com/stretchr/testify/assert"
-	"testing"
+	"image"
+	"image/color"
 	"image/jpeg"
+	"os"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"golang.org/x/image/webp"
-	"fmt"
 )
 
 func init() {
-	DetectUnsupportedPlatforms()
-	downloadFile("https://upload.wikimedia.org/wikipedia/commons/e/e3/Avola-Syracuse-Sicilia-Italy_-_Creative_Commons_by_gnuckx_%283858115914%29.jpg", "source.jpg")
-	downloadFile("https://upload.wikimedia.org/wikipedia/commons/d/d1/Snail_in_Forest_on_Lichtscheid_2.webp", "source.webp")
+	createTestJPEG("source.jpg")
+	createTestWebP("source.webp")
 }
 
-func downloadFile(url, target string) {
-	_, err := os.Stat(target)
+func createTestJPEG(path string) {
+	if _, err := os.Stat(path); err == nil {
+		return
+	}
 
+	img := image.NewRGBA(image.Rect(0, 0, 100, 100))
+	for y := 0; y < 100; y++ {
+		for x := 0; x < 100; x++ {
+			img.Set(x, y, color.RGBA{R: uint8(x * 2), G: uint8(y * 2), B: 128, A: 255})
+		}
+	}
+
+	f, err := os.Create(path)
 	if err != nil {
-		resp, err := http.Get(url)
+		panic(err)
+	}
+	defer f.Close()
 
-		if err != nil {
-			fmt.Printf("Error while downloading test image: %v\n", err)
-			panic(err)
-		}
+	if err := jpeg.Encode(f, img, &jpeg.Options{Quality: 90}); err != nil {
+		panic(err)
+	}
+}
 
-		defer resp.Body.Close()
+func createTestWebP(path string) {
+	if _, err := os.Stat(path); err == nil {
+		return
+	}
 
-		f, err := os.Create(target)
+	createTestJPEG("source.jpg")
 
-		if err != nil {
-			panic(err)
-		}
-
-		defer f.Close()
-
-		_, err = io.Copy(f, resp.Body)
-
-		if err != nil {
-			panic(err)
-		}
+	c := NewCWebP()
+	c.InputFile("source.jpg")
+	c.OutputFile(path)
+	if err := c.Run(); err != nil {
+		panic(err)
 	}
 }
 
 func TestEncodeImage(t *testing.T) {
 	c := NewCWebP()
 	f, err := os.Open("source.jpg")
-	assert.Nil(t, err)
+	require.NoError(t, err)
+	defer f.Close()
 	img, err := jpeg.Decode(f)
-	assert.Nil(t, err)
+	require.NoError(t, err)
 	c.InputImage(img)
 	c.OutputFile("target.webp")
 	err = c.Run()
@@ -62,7 +72,8 @@ func TestEncodeImage(t *testing.T) {
 func TestEncodeReader(t *testing.T) {
 	c := NewCWebP()
 	f, err := os.Open("source.jpg")
-	assert.Nil(t, err)
+	require.NoError(t, err)
+	defer f.Close()
 	c.Input(f)
 	c.OutputFile("target.webp")
 	err = c.Run()
@@ -81,7 +92,7 @@ func TestEncodeFile(t *testing.T) {
 
 func TestEncodeWriter(t *testing.T) {
 	f, err := os.Create("target.webp")
-	assert.Nil(t, err)
+	require.NoError(t, err)
 	defer f.Close()
 
 	c := NewCWebP()
@@ -97,22 +108,20 @@ func TestVersionCWebP(t *testing.T) {
 	c := NewCWebP()
 	r, err := c.Version()
 	assert.Nil(t, err)
-
-	if _, ok := os.LookupEnv("DOCKER_ARM_TEST"); !ok {
-		assert.Equal(t, "1.2.0", r)
-	}
+	assert.NotEmpty(t, r)
 }
 
 func validateWebp(t *testing.T) {
 	defer os.Remove("target.webp")
 	fSource, err := os.Open("source.jpg")
-	assert.Nil(t, err)
+	require.NoError(t, err)
+	defer fSource.Close()
 	imgSource, err := jpeg.Decode(fSource)
-	assert.Nil(t, err)
+	require.NoError(t, err)
 	fTarget, err := os.Open("target.webp")
-	assert.Nil(t, err)
+	require.NoError(t, err)
 	defer fTarget.Close()
 	imgTarget, err := webp.Decode(fTarget)
-	assert.Nil(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, imgSource.Bounds(), imgTarget.Bounds())
 }

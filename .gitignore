@@ -3,3 +3,5 @@
 vendor
 source.jpg
 source.webp
+# ralphex progress logs
+.ralphex/progress/
