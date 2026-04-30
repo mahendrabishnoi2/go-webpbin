@@ -1,19 +1,22 @@
 package webpbin
 
 import (
-	"testing"
+	"bytes"
 	"image/jpeg"
 	"os"
+	"testing"
+
 	"github.com/stretchr/testify/assert"
-	"bytes"
+	"github.com/stretchr/testify/require"
 	"golang.org/x/image/webp"
 )
 
 func TestEncode(t *testing.T) {
 	f, err := os.Open("source.jpg")
-	assert.Nil(t, err)
+	require.NoError(t, err)
+	defer f.Close()
 	imgSource, err := jpeg.Decode(f)
-	assert.Nil(t, err)
+	require.NoError(t, err)
 	var b bytes.Buffer
 	err = Encode(&b, imgSource)
 	assert.Nil(t, err)

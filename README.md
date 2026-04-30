@@ -1,22 +1,48 @@
 # WebP Encoder/Decoder for Golang
 
 [![](https://img.shields.io/badge/docs-godoc-blue.svg)](https://godoc.org/github.com/nickalie/go-webpbin)
-[![](https://circleci.com/gh/nickalie/go-webpbin.png?circle-token=ebaa6a739ac4dc96dcb167e0700dcc699409f672)](https://circleci.com/gh/nickalie/go-webpbin)
 
-WebP Encoder/Decoder for Golang based on official libwebp distribution
+WebP Encoder/Decoder for Golang based on libwebp tools.
+
+**Requires `cwebp` and `dwebp` to be installed on your system.** This library wraps the command-line tools and does not download binaries automatically.
+
+## Requirements
+
+- Go 1.25 or later
+- `cwebp` and `dwebp` command-line tools installed on your system
 
 ## Install
 
-```go get -u github.com/nickalie/go-webpbin```
+```
+go get github.com/nickalie/go-webpbin
+```
 
-## Available env
-All env can be override with option functions.
+### Installing webp tools
 
-|Name|Default|Desscription|
-|-----|------|------------|
-|SKIP_DOWNLOAD|`false`|Download webp bin automatically. Since there is no precompiled file for alpine, **THE SKIP_DOWNLOAD MUST BE true AND ASSIGN A SOURCE FOR RUN.**|
-|VENDOR_PATH|`.bin/webp`|When there is no lib within and `SKIP_DOWNLAOD` is not `true`, it'll be downloaded.|
-|LIBWEBP_VERSION|`1.2.0`|The latest version for now. (2021/07/16)|
+**Debian/Ubuntu:**
+```sh
+apt-get install webp
+```
+
+**Alpine:**
+```sh
+apk add libwebp-tools
+```
+
+**macOS (Homebrew):**
+```sh
+brew install webp
+```
+
+**Windows:**
+
+Download prebuilt binaries from the [official WebP site](https://developers.google.com/speed/webp/docs/precompiled) and add the `bin/` directory to your PATH.
+
+## Environment variables
+
+|Name|Default|Description|
+|-----|------|-----------|
+|VENDOR_PATH|_(empty)_|Directory containing `cwebp`/`dwebp` binaries. If unset, binaries are resolved via system PATH.|
 
 
 ## Example of usage
@@ -92,19 +118,29 @@ err := webpbin.NewDWebP().
 		Run()
 ```
 
-## libwebp distribution
+## Migrating from earlier versions
 
-Under the hood library uses [official libwebp distribution](https://storage.googleapis.com/downloads.webmproject.org/releases/webp/index.html), so if you're going to use it on not supported platform (arm or alpine), you need to build libwebp from sources and set ```SKIP_DOWNLOAD=true```.
+This version removes automatic binary downloading. The following breaking changes apply:
 
-Snippet to build libweb on alpine:
+- `SetSkipDownload()` removed -- no longer needed since binaries are never downloaded.
+- `DetectUnsupportedPlatforms()` removed -- no longer needed since all platforms require system-installed tools.
+- `SKIP_DOWNLOAD` env var removed -- no longer recognized.
+- `LIBWEBP_VERSION` env var removed -- the library no longer manages webp versions; your system package manager controls the installed version.
+- `VENDOR_PATH` default changed from `.bin/webp` to empty (binaries resolve via system PATH).
+
+If you previously relied on automatic downloading, install `cwebp` and `dwebp` via your system package manager before upgrading.
+
+## Building libwebp from source
+
+If your platform doesn't provide prebuilt webp packages, you can build libwebp from source:
 
 ```sh
 apk add --no-cache --update libpng-dev libjpeg-turbo-dev giflib-dev tiff-dev autoconf automake make gcc g++ wget
 
-wget https://storage.googleapis.com/downloads.webmproject.org/releases/webp/libwebp-0.6.0.tar.gz && \
-tar -xvzf libwebp-0.6.0.tar.gz && \
-mv libwebp-0.6.0 libwebp && \
-rm libwebp-0.6.0.tar.gz && \
+wget https://storage.googleapis.com/downloads.webmproject.org/releases/webp/libwebp-1.5.0.tar.gz && \
+tar -xvzf libwebp-1.5.0.tar.gz && \
+mv libwebp-1.5.0 libwebp && \
+rm libwebp-1.5.0.tar.gz && \
 cd /libwebp && \
 ./configure && \
 make && \
