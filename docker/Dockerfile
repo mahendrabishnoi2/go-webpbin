@@ -1,12 +1,11 @@
 FROM golang
 
-WORKDIR /
+RUN apt-get update && apt-get install -y --no-install-recommends webp && rm -rf /var/lib/apt/lists/*
 
-RUN go get -v github.com/nickalie/go-binwrapper && \
-    go get -v github.com/stretchr/testify/assert && \
-    go get -v golang.org/x/image/webp
+WORKDIR /app
 
-RUN mkdir -p $GOPATH/src/github.com/nickalie/go-webpbin
-COPY . $GOPATH/src/github.com/nickalie/go-webpbin
-WORKDIR $GOPATH/src/github.com/nickalie/go-webpbin
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY . .
 RUN go test -v ./...
